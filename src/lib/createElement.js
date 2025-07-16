@@ -3,8 +3,6 @@ import { addEvent } from "./eventManager";
 // 가상 DOM 객체를 실제 DOM 요소로 변환하는 함수
 export function createElement(vNode) {
   // 1. 배열인 경우 DocumentFragment 생성
-  console.log("vNode", vNode);
-  console.log("typeof vNode", typeof vNode);
   if (Array.isArray(vNode)) {
     const fragment = document.createDocumentFragment();
     vNode.forEach((child) => {

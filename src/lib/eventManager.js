@@ -14,14 +14,20 @@ export function setupEventListeners(root) {
   rootElement = root;
   isInitialized = true;
 
-  // 모든 이벤트 타입에 대해 위임 이벤트 리스너를 설정
-  const eventTypes = ["click", "input", "change", "submit", "keydown", "keyup", "focus", "blur"];
+  // 캡처 단계에서 처리해야 하는 이벤트들 (버블링되지 않는 이벤트)
+  const captureEvents = ["mouseover", "mouseout", "focus", "blur"];
 
-  // 이벤트 타입을 고정된 배열로 순회하면서 root에 **캡처 단계(true)**로 리스너를 등록.
-  // 캡처 단계 사용으로 focus/blur 등의 버블링되지 않는 이벤트도 처리 가능
-  eventTypes.forEach((eventType) => {
-    // 이벤트 위임 핸들러 등록
+  // 버블링 단계에서 처리하는 이벤트들
+  const bubbleEvents = ["click", "input", "change", "submit", "keydown", "keyup"];
+
+  // 캡처 이벤트 등록
+  captureEvents.forEach((eventType) => {
     root.addEventListener(eventType, handleEventDelegation, true);
+  });
+
+  // 버블링 이벤트 등록
+  bubbleEvents.forEach((eventType) => {
+    root.addEventListener(eventType, handleEventDelegation, false);
   });
 }
 
@@ -45,10 +51,19 @@ function handleEventDelegation(event) {
       elementHandlers.forEach((handler) => {
         try {
           handler.call(currentElement, event);
+          // stopPropagation이 호출되었으면 이벤트 전파 중단
+          if (event.defaultPrevented || event.cancelBubble) {
+            return;
+          }
         } catch (error) {
           console.error("Event handler error:", error);
         }
       });
+    }
+
+    // stopPropagation이 호출되었으면 상위 요소로 전파하지 않음
+    if (event.defaultPrevented || event.cancelBubble) {
+      break;
     }
 
     currentElement = currentElement.parentElement;
@@ -127,10 +142,19 @@ export function cleanup() {
   eventHandlers.clear();
 
   if (rootElement) {
-    const eventTypes = ["click", "input", "change", "submit", "keydown", "keyup", "focus", "blur"];
-    eventTypes.forEach((eventType) => {
+    const captureEvents = ["mouseover", "mouseout", "focus", "blur"];
+    const bubbleEvents = ["click", "input", "change", "submit", "keydown", "keyup"];
+
+    // 캡처 이벤트 제거
+    captureEvents.forEach((eventType) => {
       rootElement.removeEventListener(eventType, handleEventDelegation, true);
     });
+
+    // 버블링 이벤트 제거
+    bubbleEvents.forEach((eventType) => {
+      rootElement.removeEventListener(eventType, handleEventDelegation, false);
+    });
+
     rootElement = null;
     isInitialized = false;
   }
