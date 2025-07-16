@@ -1,49 +1,29 @@
-// import { addEvent, removeEvent } from "./eventManager";
-import { createElement } from "./createElement.js";
+import { setupEventListeners } from "./eventManager";
+import { createElement } from "./createElement";
+import { normalizeVNode } from "./normalizeVNode";
+import { updateElement } from "./updateElement";
 
-export function updateElement(parent, newNode, oldNode, index = 0) {
-  // 1. oldNode만 있는 경우
-  if (!newNode && oldNode) {
-    return parent.removeChild(parent.childNode[index]);
+export function renderElement(vNode, container) {
+  // 가상 DOM 노드 정규화
+  const normalizedVNode = normalizeVNode(vNode);
+
+  // 기존 DOM이 있는지 확인 -> NodeList
+  const oldVNode = container.firstElementChild;
+
+  if (oldVNode) {
+    console.log("normalizedVNode", normalizedVNode);
+    console.log("normalizedVNode - oldVNode", oldVNode);
+    // 기존 DOM 업데이트
+    updateElement(container, normalizedVNode, oldVNode);
+  } else {
+    // 최초 렌더링 - 새 DOM 생성
+    const element = createElement(normalizedVNode);
+    container.appendChild(element);
   }
 
-  // 2. newNode만 있는 경우
-  if (newNode && !oldNode) {
-    return parent.appendChild(createElement(newNode));
-  }
+  // 현재 가상 DOM 노드를 컨테이너에 저장
+  container._vNode = normalizedVNode;
 
-  // 3. oldNode와 newNode 모두 text 타입일 경우
-  if (typeof newNode === "string" && typeof oldNode === "string") {
-    if (newNode === oldNode) return;
-    return parent.replaceChild(createElement(newNode), parent.childNodes[index]);
-  }
-
-  // 4. oldNode와 newNode의 태그 이름(type)이 다를 경우
-  if (newNode.type !== oldNode.type) {
-    return parent.replaceChild(createElement(newNode), parent.childNodes[index]);
-  }
-
-  // 5. oldNode와 newNode의 태그 이름(type)이 같을 경우
-  updateAttributes(parent.childNodes[index], newNode.props || {}, oldNode.props || {});
-
-  // 6. newNode와 oldNode의 모든 자식 태그를 순회하며 1 ~ 5의 내용을 반복한다.
-  const maxLength = Math.max(newNode.children.length, oldNode.children.length);
-  for (let i = 0; i < maxLength; i++) {
-    updateElement(parent.childNodes[index], newNode.children[i], oldNode.children[i], i);
-  }
-}
-
-// 5 - newNode와 oldNode의 attribute를 비교하여 변경된 부분만 반영한다.
-function updateAttributes(target, newProps, oldProps) {
-  // 달라지거나 추가된 Props를 반영
-  for (const [attr, value] of Object.entries(newProps)) {
-    if (oldProps[attr] === newProps[attr]) continue;
-    target.setAttribute(attr, value);
-  }
-
-  // 없어진 props를 attribute에서 제거
-  for (const attr of Object.keys(oldProps)) {
-    if (newProps[attr] !== undefined) continue;
-    target.removeAttribute(attr);
-  }
+  // 이벤트 리스너 설정
+  setupEventListeners(container);
 }

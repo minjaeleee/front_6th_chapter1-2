@@ -2,7 +2,6 @@ import { addEvent } from "./eventManager";
 
 // 가상 DOM 객체를 실제 DOM 요소로 변환하는 함수
 export function createElement(vNode) {
-  // console.log("전체 vNode", vNode);
   // 1. 텍스트 노드인 경우
   if (typeof vNode === "string" || typeof vNode === "number") {
     return document.createTextNode(vNode);

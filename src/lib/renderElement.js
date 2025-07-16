@@ -11,6 +11,8 @@ export function renderElement(vNode, container) {
   const oldVNode = container.firstElementChild;
 
   if (oldVNode) {
+    console.log("normalizedVNode", normalizedVNode);
+    console.log("normalizedVNode - oldVNode", oldVNode);
     // 기존 DOM 업데이트
     updateElement(container, normalizedVNode, oldVNode);
   } else {
