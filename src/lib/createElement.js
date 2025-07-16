@@ -2,22 +2,30 @@ import { addEvent } from "./eventManager";
 
 // 가상 DOM 객체를 실제 DOM 요소로 변환하는 함수
 export function createElement(vNode) {
-  // 1. 텍스트 노드인 경우
+  // 1. 배열인 경우 DocumentFragment 생성
+  if (Array.isArray(vNode)) {
+    const fragment = document.createDocumentFragment();
+    vNode.forEach((child) => {
+      if (child != null) {
+        const childElement = createElement(child);
+        fragment.appendChild(childElement);
+      }
+    });
+    if (fragment.childNodes.length === 1) {
+      return fragment.firstChild;
+    }
+
+    return fragment;
+  }
+
+  // 2. 텍스트 노드인 경우
   if (typeof vNode === "string" || typeof vNode === "number") {
     return document.createTextNode(vNode);
   }
 
-  // 2. null, undefined인 경우
-  if (vNode == null) {
+  // 3. null, undefined인 경우
+  if (vNode == null || typeof vNode === "boolean") {
     return document.createTextNode("");
-  }
-
-  // 3. 컴포넌트 함수(컴포넌트) 인 경우
-  if (typeof vNode.type === "function") {
-    const component = vNode.type;
-    const props = { ...vNode.props, children: vNode.children };
-    const result = component(props);
-    return createElement(result);
   }
 
   // 일반 DOM 요소인 경우
@@ -26,9 +34,12 @@ export function createElement(vNode) {
   // 속성 설정
   updateAttributes(element, vNode.props || {});
 
-  // 자식 요소들 생성
-  if (vNode.children) {
-    vNode.children.forEach((child) => {
+  // 자식 노드 처리: vNode.children 또는 vNode.props.children
+  const children = vNode.children || (vNode.props && vNode.props.children);
+
+  if (children) {
+    const normalized = Array.isArray(children) ? children : [children];
+    normalized.forEach((child) => {
       if (child != null) {
         const childElement = createElement(child);
         element.appendChild(childElement);
