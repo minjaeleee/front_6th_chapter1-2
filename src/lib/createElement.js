@@ -3,6 +3,8 @@ import { addEvent } from "./eventManager";
 // 가상 DOM 객체를 실제 DOM 요소로 변환하는 함수
 export function createElement(vNode) {
   // 1. 배열인 경우 DocumentFragment 생성
+  console.log("vNode", vNode);
+  console.log("typeof vNode", typeof vNode);
   if (Array.isArray(vNode)) {
     const fragment = document.createDocumentFragment();
     vNode.forEach((child) => {
@@ -60,20 +62,20 @@ function updateAttributes($el, props) {
       // 이벤트 리스너
       const eventName = key.toLowerCase().substring(2);
       eventListeners[eventName] = props[key];
-    } else if (key === "className") {
-      // className 처리
-      $el.className = props[key];
     } else if (key !== "children") {
-      // 일반 속성
+      // 일반 속성 (className 포함)
       attributes[key] = props[key];
     }
   });
 
-  // 일반 속성 설정
+  // 일반 속성 설정 (순서 유지)
   Object.keys(attributes).forEach((key) => {
     if (key === "style" && typeof attributes[key] === "object") {
       // style 객체 처리
       Object.assign($el.style, attributes[key]);
+    } else if (key === "className") {
+      // className 처리
+      $el.className = attributes[key];
     } else {
       $el.setAttribute(key, attributes[key]);
     }
