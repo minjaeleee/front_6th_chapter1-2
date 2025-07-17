@@ -47,6 +47,24 @@ export function createElement(vNode) {
     });
   }
 
+  // select 요소의 경우 selected 속성 처리
+  if (vNode.type === "select") {
+    const options = element.querySelectorAll("option");
+    let hasSelected = false;
+
+    // 먼저 selected=true인 옵션이 있는지 확인
+    options.forEach((option) => {
+      if (option.selected) {
+        hasSelected = true;
+      }
+    });
+
+    // selected=true인 옵션이 없으면 첫 번째 옵션을 선택
+    if (!hasSelected && options.length > 0) {
+      options[0].selected = true;
+    }
+  }
+
   return element;
 }
 
@@ -66,6 +84,31 @@ function updateAttributes($el, props) {
     }
   });
 
+  // Boolean 속성들 (DOM property로 직접 설정)
+  const booleanProps = ["checked", "disabled", "selected", "readOnly"];
+
+  // Boolean 속성 처리
+  booleanProps.forEach((prop) => {
+    if (attributes[prop] !== undefined) {
+      $el[prop] = attributes[prop];
+
+      // DOM attribute 처리
+      if (attributes[prop] === true) {
+        if (prop === "checked") {
+          // checked는 DOM attribute를 설정하지 않음
+          $el.removeAttribute(prop);
+        } else {
+          $el.setAttribute(prop, "");
+        }
+      } else {
+        $el.removeAttribute(prop);
+      }
+
+      // 처리된 속성 제거
+      delete attributes[prop];
+    }
+  });
+
   // 일반 속성 설정 (순서 유지)
   Object.keys(attributes).forEach((key) => {
     if (key === "style" && typeof attributes[key] === "object") {
@@ -74,9 +117,6 @@ function updateAttributes($el, props) {
     } else if (key === "className") {
       // className 처리
       $el.className = attributes[key];
-    } else if (key === "selected") {
-      // selected 속성 처리
-      $el.selected = attributes[key];
     } else {
       $el.setAttribute(key, attributes[key]);
     }
