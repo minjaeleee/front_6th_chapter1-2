@@ -74,6 +74,9 @@ function updateAttributes($el, props) {
     } else if (key === "className") {
       // className 처리
       $el.className = attributes[key];
+    } else if (key === "selected") {
+      // selected 속성 처리
+      $el.selected = attributes[key];
     } else {
       $el.setAttribute(key, attributes[key]);
     }
