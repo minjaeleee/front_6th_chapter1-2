@@ -7,8 +7,8 @@ export function renderElement(vNode, container) {
   // 가상 DOM 노드 정규화
   const normalizedVNode = normalizeVNode(vNode);
 
-  // 기존 DOM이 있는지 확인 -> NodeList
-  const oldVNode = container.firstElementChild;
+  // 이전 가상 DOM 노드 가져오기
+  const oldVNode = container._vNode;
 
   if (oldVNode) {
     // 기존 DOM 업데이트

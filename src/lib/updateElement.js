@@ -15,7 +15,7 @@ function isSameType(newType, oldType) {
 export function updateElement(parent, newNode, oldNode, index = 0) {
   // 1. oldNode만 있는 경우
   if (!newNode && oldNode) {
-    return parent.removeChild(parent.childNode[index]);
+    return parent.removeChild(parent.childNodes[index]);
   }
 
   // 2. newNode만 있는 경우
@@ -25,6 +25,7 @@ export function updateElement(parent, newNode, oldNode, index = 0) {
 
   // 3. oldNode와 newNode 모두 text 타입일 경우
   if (typeof newNode === "string" && typeof oldNode === "string") {
+    // 같으면 아무것도 하지 않음 -> 성능 최적화 고려
     if (newNode === oldNode) return;
     return parent.replaceChild(createElement(newNode), parent.childNodes[index]);
   }
@@ -38,9 +39,25 @@ export function updateElement(parent, newNode, oldNode, index = 0) {
   updateAttributes(parent.childNodes[index], newNode.props || {}, oldNode.props || {});
 
   // 6. newNode와 oldNode의 모든 자식 태그를 순회하며 1 ~ 5의 내용을 반복한다.
-  const maxLength = Math.max(newNode.children.length, oldNode.children.length);
-  for (let i = 0; i < maxLength; i++) {
-    updateElement(parent.childNodes[index], newNode.children[i], oldNode.children[i], i);
+  const newChildren = newNode.children || [];
+  const oldChildren = oldNode.children || [];
+
+  // 먼저 공통된 자식들을 처리
+  for (let i = 0; i < Math.min(newChildren.length, oldChildren.length); i++) {
+    updateElement(parent.childNodes[index], newChildren[i], oldChildren[i], i);
+  }
+
+  // 새로운 자식들을 추가
+  for (let i = oldChildren.length; i < newChildren.length; i++) {
+    const childElement = createElement(newChildren[i]);
+    parent.childNodes[index].appendChild(childElement);
+  }
+
+  // 초과하는 기존 자식들을 역순으로 제거
+  for (let i = oldChildren.length - 1; i >= newChildren.length; i--) {
+    if (parent.childNodes[index].childNodes[i]) {
+      parent.childNodes[index].removeChild(parent.childNodes[index].childNodes[i]);
+    }
   }
 }
 
@@ -99,9 +116,72 @@ function updateAttributes(target, newProps, oldProps) {
     }
   });
 
+  // Boolean 속성들 (DOM property로 직접 설정)
+  const booleanProps = ["checked", "disabled", "selected", "readOnly"];
+
+  // Boolean 속성 처리
+  booleanProps.forEach((prop) => {
+    const newValue = newProps[prop];
+    const oldValue = oldProps[prop];
+
+    if (newValue !== undefined) {
+      if (newValue !== oldValue) {
+        target[prop] = newValue;
+
+        // DOM attribute 처리
+        if (newValue === true) {
+          if (prop === "checked") {
+            // checked는 DOM attribute를 설정하지 않음
+            target.removeAttribute(prop);
+          } else {
+            target.setAttribute(prop, "");
+          }
+        } else {
+          target.removeAttribute(prop);
+        }
+      }
+    } else if (oldValue !== undefined) {
+      // 속성이 제거된 경우
+      target[prop] = false;
+      target.removeAttribute(prop);
+    }
+  });
+
+  // <option>의 selected 속성 특별 처리
+  if (target.tagName === "OPTION" && ("selected" in newProps || "selected" in oldProps)) {
+    if (newProps.selected) {
+      target.selected = true;
+      target.removeAttribute("selected");
+    } else {
+      target.selected = false;
+      target.removeAttribute("selected");
+    }
+  }
+
+  // selected 속성 특별 처리 (select 요소의 경우)
+  if (target.tagName === "SELECT") {
+    const options = target.querySelectorAll("option");
+    let hasSelected = false;
+
+    // selected=true인 옵션이 있는지 확인
+    options.forEach((option) => {
+      if (option.selected) {
+        hasSelected = true;
+      }
+    });
+
+    // selected=true인 옵션이 없으면 첫 번째 옵션을 선택
+    if (!hasSelected && options.length > 0) {
+      options[0].selected = true;
+    }
+  }
+
   // 일반 속성 처리
   // 달라지거나 추가된 Props를 반영
   for (const [attr, value] of Object.entries(newAttributes)) {
+    // Boolean 속성은 이미 처리됨
+    if (booleanProps.includes(attr)) continue;
+
     if (oldAttributes[attr] === newAttributes[attr]) continue;
 
     if (attr === "className") {
@@ -115,7 +195,16 @@ function updateAttributes(target, newProps, oldProps) {
 
   // 없어진 props를 attribute에서 제거
   for (const attr of Object.keys(oldAttributes)) {
+    // Boolean 속성은 이미 처리됨
+    if (booleanProps.includes(attr)) continue;
+
     if (newAttributes[attr] !== undefined) continue;
-    target.removeAttribute(attr);
+
+    if (attr === "className") {
+      target.className = "";
+      target.removeAttribute("class");
+    } else {
+      target.removeAttribute(attr);
+    }
   }
 }
